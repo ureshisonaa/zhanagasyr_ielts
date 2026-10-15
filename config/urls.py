@@ -1,0 +1,48 @@
+from django.urls import path
+from core import views as v, auth_views as a, exam_views as e
+
+urlpatterns = [
+    path('', v.dashboard, name='dashboard'),
+    path('health/', v.health, name='health'),
+    path('login/', a.login_view, name='login'),
+    path('logout/', a.logout_view, name='logout'),
+    path('forgot-password/', a.forgot, name='forgot'),
+    path('activate-account/<str:uid>/<str:token>/', a.activate, name='activate'),
+    path('profile/', a.profile, name='profile'),
+    path('access-denied/', v.error_403),
+    path('manage/users/', v.users, name='users'),
+    path('manage/users/new/', v.user_edit, name='user_create'),
+    path('manage/users/<int:pk>/', v.user_edit, name='user_edit'),
+    path('manage/users/<int:pk>/action/', v.user_action, name='user_action'),
+    path('groups/', v.groups, name='groups'),
+    path('groups/new/', v.group_edit, name='group_create'),
+    path('groups/<int:pk>/', v.group_edit, name='group_edit'),
+    path('manage/exams/', v.exam_bank, name='exam_bank'),
+    path('manage/exams/new/', v.exam_create, name='exam_create'),
+    path('manage/versions/<int:pk>/', v.version_edit, name='version_edit'),
+    path('manage/versions/<int:pk>/upload/', v.upload_asset, name='upload_asset'),
+    path('manage/versions/<int:pk>/sections/<int:index>/', v.section_edit, name='section_edit'),
+    path('manage/versions/<int:pk>/sections/<int:index>/questions/new/', v.question_edit, name='question_create'),
+    path('manage/versions/<int:pk>/sections/<int:index>/questions/<str:question_id>/', v.question_edit, name='question_edit'),
+    path('manage/assignments/', v.assignments, name='assignments'),
+    path('manage/assignments/new/', v.assignment_create, name='assignment_create'),
+    path('manage/audit/', v.audit_log, name='audit_log'),
+    path('manage/export/', v.export_results, name='export_results'),
+    path('exams/', v.student_exams, name='student_exams'),
+    path('exams/<int:pk>/instructions/', v.instructions, name='instructions'),
+    path('attempts/<uuid:pk>/', e.attempt_view, name='attempt'),
+    path('api/attempts/<uuid:pk>/state/', e.state, name='attempt_state'),
+    path('api/attempts/<uuid:pk>/answers/', e.save, name='save_answers'),
+    path('api/attempts/<uuid:pk>/listening/', e.listening_start, name='listening_start'),
+    path('api/attempts/<uuid:pk>/recordings/<str:question_id>/', e.recording_upload, name='recording_upload'),
+    path('results/', v.results, name='results'),
+    path('results/<uuid:pk>/', v.result_detail, name='result_detail'),
+    path('results/<uuid:pk>/publish/', v.publish_result, name='publish_result'),
+    path('results/<uuid:pk>/void/', v.void_attempt, name='void_attempt'),
+    path('reviews/', v.reviews, name='reviews'),
+    path('reviews/<int:pk>/', v.review_detail, name='review_detail'),
+    path('media/<uuid:pk>/', e.private_media, name='private_media'),
+]
+handler403 = 'core.views.error_403'
+handler404 = 'core.views.error_404'
+handler500 = 'core.views.error_500'
