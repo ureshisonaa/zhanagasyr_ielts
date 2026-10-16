@@ -6,6 +6,6 @@
     "config/wsgi.py": { "maxDuration": 60 }
   },
   "git": {
-    "deploymentEnabled": false
+    "deploymentEnabled": true
   }
 }
