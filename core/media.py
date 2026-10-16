@@ -1,7 +1,3 @@
-import json
-import os
-import subprocess
-import tempfile
 from pathlib import Path
 from PIL import Image
 from django.core.exceptions import ValidationError
@@ -29,27 +25,24 @@ def inspect_upload(upload, audio_only=False, max_seconds=7200):
             upload.seek(0)
     if ext not in audio_types:
         raise ValidationError('Неподдерживаемое расширение файла.')
-    temp_path = None
     try:
-        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
-            temp_path = tmp.name
-            for chunk in upload.chunks():
-                tmp.write(chunk)
-        result = subprocess.run(['ffprobe', '-v', 'error', '-protocol_whitelist', 'file,pipe', '-show_streams', '-show_format', '-of', 'json', temp_path], capture_output=True, timeout=15, check=True)
-        info = json.loads(result.stdout)
-        streams = info.get('streams', [])
-        if not streams or any(s.get('codec_type') != 'audio' for s in streams):
-            raise ValueError()
-        if float(info.get('format', {}).get('duration', 0)) > max_seconds:
-            raise ValidationError('Запись превышает разрешённую продолжительность.')
-        formats = set(info.get('format', {}).get('format_name', '').split(','))
-        expected = {'.mp3': 'mp3', '.wav': 'wav', '.ogg': 'ogg', '.webm': 'webm', '.m4a': 'mov'}
-        if expected[ext] not in formats:
-            raise ValueError()
+        import av
+        with av.open(upload, options={'protocol_whitelist': 'file,pipe'}) as container:
+            if not container.streams.audio or any(stream.type != 'audio' for stream in container.streams):
+                raise ValueError()
+            if container.duration and container.duration / av.time_base > max_seconds:
+                raise ValidationError('Запись превышает разрешённую продолжительность.')
+            formats = set(container.format.name.split(','))
+            expected = {'.mp3': 'mp3', '.wav': 'wav', '.ogg': 'ogg', '.webm': 'webm', '.m4a': 'mov'}
+            if expected[ext] not in formats:
+                raise ValueError()
+            # Decode at least one frame: container headers alone are insufficient.
+            if next(container.decode(audio=0), None) is None:
+                raise ValueError()
         return audio_types[ext]
-    except (subprocess.SubprocessError, ValueError, OSError) as exc:
-        raise ValidationError('Не удалось проверить аудио. Используйте корректный аудиофайл; на сервере требуется ffprobe.') from exc
+    except ValidationError:
+        raise
+    except Exception as exc:
+        raise ValidationError('Не удалось проверить аудио. Используйте корректный аудиофайл.') from exc
     finally:
         upload.seek(0)
-        if temp_path:
-            os.unlink(temp_path)

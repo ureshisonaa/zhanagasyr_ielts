@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, unquote, parse_qs
 from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,6 +33,11 @@ if os.getenv('DATABASE_URL'):
     if db.scheme not in ('postgres', 'postgresql'):
         raise ImproperlyConfigured('DATABASE_URL must use PostgreSQL')
     DATABASES = {'default': {'ENGINE': 'django.db.backends.postgresql', 'NAME': unquote(db.path[1:]), 'USER': unquote(db.username or ''), 'PASSWORD': unquote(db.password or ''), 'HOST': db.hostname, 'PORT': db.port or 5432, 'CONN_MAX_AGE': 60}}
+    DATABASES['default']['OPTIONS'] = {'sslmode': parse_qs(db.query).get('sslmode', ['require' if not DEBUG else 'prefer'])[0], 'connect_timeout': 10}
+    if os.getenv('VERCEL'):
+        DATABASES['default'].update(CONN_MAX_AGE=0, DISABLE_SERVER_SIDE_CURSORS=True)
+elif os.getenv('VERCEL'):
+    raise ImproperlyConfigured('Vercel requires a persistent PostgreSQL DATABASE_URL')
 AUTH_USER_MODEL = 'core.User'
 AUTH_PASSWORD_VALIDATORS = [{'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'}, {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 10}}, {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'}, {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'}]
 PASSWORD_RESET_TIMEOUT = 86400
@@ -44,6 +49,8 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STORAGES = {'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'}, 'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'}}
+if os.getenv('BLOB_READ_WRITE_TOKEN'):
+    STORAGES['default'] = {'BACKEND': 'core.storage.PrivateBlobStorage'}
 MEDIA_ROOT = Path(os.getenv('PRIVATE_MEDIA_ROOT', str(BASE_DIR / 'var' / 'private')))
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/login/'
