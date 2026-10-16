@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "django",
-  "buildCommand": "python manage.py check --deploy --fail-level ERROR",
+  "buildCommand": "python scripts/vercel-build.py",
   "functions": {
     "config/wsgi.py": { "maxDuration": 60 }
   },
