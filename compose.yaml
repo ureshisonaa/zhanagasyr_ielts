@@ -1,0 +1,65 @@
+name: zhanagasyr
+x-app: &app
+  build: .
+  environment: &app-env
+    DJANGO_DEBUG: "0"
+    DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set a random secret in .env}
+    DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?Set the production hostname},localhost,127.0.0.1
+    CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:?Set the HTTPS origin}
+    SITE_URL: ${SITE_URL:?Set the HTTPS site URL}
+    TRUST_PROXY: "1"
+    DATABASE_URL: postgresql://zhanagasyr:${POSTGRES_PASSWORD:?Set a URL-safe database password}@db:5432/zhanagasyr
+    PRIVATE_MEDIA_ROOT: /app/var/private
+    EMAIL_HOST: ${EMAIL_HOST:-}
+    EMAIL_PORT: ${EMAIL_PORT:-587}
+    EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+    EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+    DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@example.com}
+  volumes:
+    - app_data:/app/var
+    - static_data:/app/staticfiles
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: zhanagasyr
+      POSTGRES_DB: zhanagasyr
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a URL-safe database password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  setup:
+    <<: *app
+    command: ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput"]
+    depends_on:
+      db:
+        condition: service_healthy
+  web:
+    <<: *app
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=3)"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+  timer:
+    <<: *app
+    command: ["python", "manage.py", "expire_attempts", "--loop"]
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    restart: unless-stopped
+volumes:
+  postgres_data:
+  app_data:
+  static_data:

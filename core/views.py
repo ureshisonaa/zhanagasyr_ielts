@@ -113,9 +113,9 @@ def user_action(request, pk):
         if request.POST.get('action') == 'invite':
             if not user.is_active:
                 raise PermissionDenied('Сначала восстановите доступ аккаунту.')
-            # Rotating last_login invalidates earlier links without changing a password.
-            user.last_login = timezone.now()
-            user.save(update_fields=['last_login'])
+            # A monotonic version invalidates earlier links even within the same second.
+            user.session_version += 1
+            user.save(update_fields=['session_version'])
             services.audit(request.user, 'account.invitation_issued', user.pk)
             return render(request, 'core/invitation.html', {'account': user, 'invite_url': activation_link(user)})
         user.is_active = not user.is_active

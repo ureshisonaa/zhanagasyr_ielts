@@ -1,0 +1,12 @@
+{
+  "name": "zhanagasyr-ielts-browser-checks",
+  "private": true,
+  "scripts": {
+    "test:browser": "node scripts/browser-smoke.cjs",
+    "format": "prettier --write static/core/*.css static/core/*.js scripts/*.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1",
+    "prettier": "3.9.10"
+  }
+}

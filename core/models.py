@@ -157,6 +157,9 @@ class MediaAsset(models.Model):
     question_id = models.CharField(max_length=60, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return self.name
+
     class Meta:
         constraints = [models.CheckConstraint(condition=(Q(version__isnull=False, run__isnull=True) | Q(version__isnull=True, run__isnull=False)), name='asset_one_parent'), models.UniqueConstraint(fields=['run', 'question_id'], condition=Q(run__isnull=False), name='single_recording_per_question')]
 

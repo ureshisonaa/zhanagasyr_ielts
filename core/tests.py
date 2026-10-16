@@ -118,6 +118,12 @@ class PlatformTests(TestCase):
             url = activation_link(self.student).replace('http://127.0.0.1:8000', '')
             self.assertContains(self.client.get(url), 'Ссылка недействительна')
 
+    def test_reissued_invitation_immediately_invalidates_previous_link(self):
+        old_url = activation_link(self.student).replace('http://127.0.0.1:8000', '')
+        self.sign_in(self.admin)
+        self.client.post(reverse('user_action', args=[self.student.pk]), {'action': 'invite'})
+        self.assertContains(Client().get(old_url), 'Ссылка недействительна')
+
     def test_password_reset_does_not_enumerate_accounts(self):
         one = self.client.post('/forgot-password/', {'email': 'student@example.com'})
         two = self.client.post('/forgot-password/', {'email': 'missing@example.com'})

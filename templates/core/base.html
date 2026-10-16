@@ -6,7 +6,7 @@
 {% block layout %}
 {% if user.is_authenticated %}
 <aside class="sidebar" id="sidebar">
-  <a class="brand" href="{% url 'dashboard' %}"><span class="brand-mark">Z<span>↗</span></span><span>ZhanaGasyr<small>IELTS ACADEMY</small></span></a>
+  <a class="brand" href="{% url 'dashboard' %}"><span class="brand-mark">Z<span><svg class="arrow-up" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 18 18 6M6 6h12v12"/></svg></span></span><span>ZhanaGasyr<small>IELTS ACADEMY</small></span></a>
   <div class="nav-caption">ВАШЕ ПРОСТРАНСТВО</div>
   <nav aria-label="Основная навигация">
     <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><svg><use href="#i-grid"/></svg>Обзор</a>
@@ -18,7 +18,7 @@
     {% if user.is_manager %}<a href="{% url 'users' %}" class="{% if '/users/' in current_path %}active{% endif %}"><svg><use href="#i-users"/></svg>Пользователи</a>{% endif %}
     {% if user.may_audit %}<a href="{% url 'audit_log' %}" class="{% if '/audit/' in current_path %}active{% endif %}"><svg><use href="#i-check"/></svg>Журнал действий</a>{% endif %}
   </nav>
-  <div class="sidebar-bottom"><div class="support-note"><span class="tiny-star">✳</span><strong>Большие цели.<br>Уверенные шаги.</strong><p>Каждая попытка приближает<br>к вашему результату.</p></div><a class="profile-link" href="{% url 'profile' %}"><span class="avatar">{{ user.display_name|first|upper }}</span><span>{{ user.display_name }}<small>{{ user.get_role_display }}</small></span><span>↗</span></a></div>
+  <div class="sidebar-bottom"><div class="support-note"><span class="tiny-star">✳</span><strong>Большие цели.<br>Уверенные шаги.</strong><p>Каждая попытка приближает<br>к вашему результату.</p></div><a class="profile-link" href="{% url 'profile' %}"><span class="avatar">{{ user.display_name|first|upper }}</span><span>{{ user.display_name }}<small>{{ user.get_role_display }}</small></span><span><svg class="arrow-up" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 18 18 6M6 6h12v12"/></svg></span></a></div>
 </aside>
 <div class="workspace"><header class="topbar"><button type="button" class="mobile-menu" aria-label="Открыть меню" aria-expanded="false">☰</button><span class="breadcrumb">Платформа подготовки <span>/</span> <strong>IELTS Academic</strong></span><div class="top-actions"><span class="private-badge">● Закрытая платформа</span><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="icon-button" title="Выйти" aria-label="Выйти"><svg><use href="#i-logout"/></svg></button></form></div></header>
 {% endif %}
