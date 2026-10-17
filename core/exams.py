@@ -71,6 +71,7 @@ def normalized(value, case_sensitive=False):
 
 def auto_score(section, responses):
     raw = 0
+    consumed = {}
     for q in section['questions']:
         answer = responses.get(q['id'], '')
         norm = lambda x: normalized(x, q.get('case_sensitive', False))
@@ -80,6 +81,11 @@ def auto_score(section, responses):
             correct = isinstance(answer, str) and bool(norm(answer)) and norm(answer) in {norm(x) for x in q['answers']}
             if q.get('max_words') and len(answer.split()) > q['max_words']:
                 correct = False
+        if correct and q.get("answer_group"):
+            used = consumed.setdefault(q["answer_group"], set())
+            value = norm(answer)
+            correct = value not in used
+            used.add(value)
         raw += int(correct)
     band = max((Decimal(str(b)) for minimum, b in section['bands'] if raw >= minimum), default=Decimal('0'))
     return raw, band

@@ -24,12 +24,12 @@ def attempt_view(request, pk):
     run = attempt.runs.get(index=attempt.current_section)
     section = attempt.assignment.version.content['sections'][run.index]
     # Explicit allowlist: never serialize answer keys or raw-to-band tables.
-    questions = [{k: q.get(k, '') for k in ('id', 'type', 'prompt', 'options', 'image_id', 'max_words')} for q in section['questions']]
+    questions = [{k: q.get(k, '') for k in ('id', 'type', 'prompt', 'options', 'image_id', 'max_words', 'material_id', 'part')} for q in section['questions']]
     for q in questions:
         q['value'] = run.responses.get(q['id'], '')
         q['recording'] = run.recordings.filter(question_id=q['id']).first()
     state = {'attempt': str(attempt.pk), 'section': run.index, 'kind': run.kind, 'revision': run.revision, 'responses': run.responses, 'server_now': timezone.now().isoformat(), 'deadline': run.deadline.isoformat(), 'started_at': run.started_at.isoformat(), 'save_url': f'/api/attempts/{pk}/answers/', 'state_url': f'/api/attempts/{pk}/state/'}
-    return render(request, 'core/attempt.html', {'attempt': attempt, 'run': run, 'section_name': LABELS[run.kind], 'instructions': section.get('instructions', ''), 'passage': section.get('passage', ''), 'questions': questions, 'state': state, 'steps': list(LABELS.values()), 'has_audio': bool(section.get('audio_id')), 'replay': section.get('replay', False)})
+    return render(request, 'core/attempt.html', {'attempt': attempt, 'run': run, 'section_name': LABELS[run.kind], 'instructions': section.get('instructions', ''), 'passage': section.get('passage', ''), 'questions': questions, 'state': state, 'steps': list(LABELS.values()), 'has_audio': bool(section.get('audio_id')), 'replay': section.get('replay', False), 'materials': section.get('materials', [])})
 
 
 @roles('student')
@@ -170,7 +170,7 @@ def private_media(request, pk):
                 attempt = refresh_attempt(attempt.pk)
                 if attempt.status == 'active':
                     section = asset.version.content['sections'][attempt.current_section]
-                    allowed_ids = [q.get('image_id') for q in section['questions']]
+                    allowed_ids = [q.get('image_id') for q in section['questions']] + [m['id'] for m in section.get('materials', [])]
                     if str(asset.pk) in allowed_ids and asset.content_type.startswith('image/'):
                         allowed = True
                     elif str(asset.pk) == section.get('audio_id'):

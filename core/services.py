@@ -37,6 +37,7 @@ def publish_version(user, version_id):
             raise ValidationError('Загрузите аудио Listening перед публикацией.')
         assets = [(section.get('audio_id'), 'audio/')]
         assets.extend((q.get('image_id'), 'image/') for q in section['questions'])
+        assets.extend((m.get('id'), 'image/') for m in section.get('materials', []))
         for asset_id, media_type in assets:
             if asset_id and not MediaAsset.objects.filter(pk=asset_id, version=version, content_type__startswith=media_type).exists():
                 raise ValidationError('Материал должен принадлежать этой версии и иметь правильный формат.')

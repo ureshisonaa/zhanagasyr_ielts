@@ -187,7 +187,10 @@ def version_edit(request, pk):
                         replacements[str(asset.pk)] = str(new.pk)
                     for section in cloned.content['sections']:
                         section['audio_id'] = replacements.get(section.get('audio_id'), '')
+                        for material in section.get('materials', []):
+                            material['id'] = replacements.get(material['id'], '')
                         for q in section['questions']:
+                            q['material_id'] = replacements.get(q.get('material_id'), '')
                             q['image_id'] = replacements.get(q.get('image_id'), '')
                     cloned.save()
                     services.audit(request.user, 'version.cloned', cloned.pk, source=version.pk)

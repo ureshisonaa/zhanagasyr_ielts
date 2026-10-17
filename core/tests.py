@@ -416,3 +416,30 @@ class PlatformTests(TestCase):
         response = self.client.get(reverse('attempt', args=[attempt.pk]))
         self.assertNotContains(response, '<script>alert(1)</script>')
         self.assertContains(response, '&lt;script&gt;alert(1)&lt;/script&gt;')
+
+    def test_unordered_pair_scores_distinct_answers_only(self):
+        section = {'bands': [[0, 0], [1, 5], [2, 9]], 'questions': [
+            {'id': 'a', 'type': 'choice', 'answers': ['B', 'D'], 'answer_group': 'pair'},
+            {'id': 'b', 'type': 'choice', 'answers': ['B', 'D'], 'answer_group': 'pair'},
+        ]}
+        self.assertEqual(auto_score(section, {'a': 'D', 'b': 'B'})[0], 2)
+        self.assertEqual(auto_score(section, {'a': 'B', 'b': 'B'})[0], 1)
+        self.assertEqual(auto_score(section, {'a': 'A', 'b': 'D'})[0], 1)
+
+    def test_source_pages_require_current_section_and_owner(self):
+        with tempfile.TemporaryDirectory() as directory, self.settings(MEDIA_ROOT=directory):
+            asset = MediaAsset.objects.create(file=SimpleUploadedFile('page.jpg', b'page'), name='Page', content_type='image/jpeg', owner=self.admin, version=self.version)
+            content = copy.deepcopy(self.version.content)
+            content['sections'][0]['materials'] = [{'id': str(asset.pk), 'title': 'Source page'}]
+            TestVersion.objects.filter(pk=self.version.pk).update(content=content)
+            attempt = start_attempt(self.student, self.assignment.pk)
+            self.sign_in(self.student)
+            self.assertEqual(self.client.get(reverse('private_media', args=[asset.pk])).status_code, 200)
+            page = self.client.get(reverse('attempt', args=[attempt.pk]))
+            self.assertContains(page, 'Source page')
+            self.assertNotContains(page, '"answers"')
+            self.sign_in(self.other)
+            self.assertEqual(self.client.get(reverse('private_media', args=[asset.pk])).status_code, 403)
+            save_answers(self.student, attempt.pk, 0, 0, {}, True)
+            self.sign_in(self.student)
+            self.assertEqual(self.client.get(reverse('private_media', args=[asset.pk])).status_code, 403)

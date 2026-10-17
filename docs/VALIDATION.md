@@ -9,3 +9,12 @@
 - Production в Vercel пока не развёрнут. Его инфраструктурные требования перечислены в `VERCEL.md`.
 
 Файлы скриншотов и демонстрационные данные находятся в игнорируемой папке `var/`; реальные пароли и сессионные данные в Git не добавляются. Проверка на реальных Safari/iOS/Android, нагрузочное тестирование и калибровка полного банка IELTS ещё необходимы перед учебным запуском.
+
+## Cambridge 21 import and exam workspace (2026-10-17)
+
+- Imported the owner's PDF and four Listening recordings into private storage, outside Git: 40 Listening questions, 40 Reading questions, two Writing tasks including the original chart, and three Speaking parts.
+- Answer keys checked against supplied pages 117–118. Unordered Listening pairs consume each correct answer only once; all-correct fixtures score 40/40.
+- Source-page access is limited to the current assigned section; unrelated students cannot retrieve the pages. Cloning remaps source asset references.
+- Exam-only stylesheet and controls: part tabs, numbered navigation, review flags, focus, text size, local notes, temporary highlighting, print/PDF export, native replay controls and playback speed when replay is allowed. The existing deadline and autosave rules remain in force.
+- Desktop/mobile browser check verified part switching, answers and notes surviving reload, and no horizontal overflow or JavaScript errors.
+- Source documents are shown alongside answer fields. This is an adaptation of the supplied Engnovate reference, not a pixel-identical copy or its paid section-practice service.
