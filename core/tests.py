@@ -436,10 +436,38 @@ class PlatformTests(TestCase):
             self.sign_in(self.student)
             self.assertEqual(self.client.get(reverse('private_media', args=[asset.pk])).status_code, 200)
             page = self.client.get(reverse('attempt', args=[attempt.pk]))
-            self.assertContains(page, 'Source page')
+            self.assertNotContains(page, 'source-image')
             self.assertNotContains(page, '"answers"')
             self.sign_in(self.other)
             self.assertEqual(self.client.get(reverse('private_media', args=[asset.pk])).status_code, 403)
             save_answers(self.student, attempt.pk, 0, 0, {}, True)
             self.sign_in(self.student)
             self.assertEqual(self.client.get(reverse('private_media', args=[asset.pk])).status_code, 403)
+
+    def test_interactive_groups_preserve_controls_and_hide_keys(self):
+        content = copy.deepcopy(self.version.content)
+        section = content['sections'][0]
+        section['questions'][1]['option_labels'] = {'Monday': 'Option Monday', 'Tuesday': 'Option Tuesday', 'Thursday': 'Option Thursday'}
+        section['groups'] = [{'id': 'inline', 'part': '1', 'title': 'Complete the table', 'paragraphs': ['The answer is [[l1]].'], 'question_ids': ['l2', 'l3', 'l4']}]
+        validate_content(content)
+        TestVersion.objects.filter(pk=self.version.pk).update(content=content)
+        attempt = start_attempt(self.student, self.assignment.pk)
+        self.sign_in(self.student)
+        response = self.client.get(reverse('attempt', args=[attempt.pk]))
+        self.assertContains(response, 'class="question-card inline-question"')
+        self.assertContains(response, 'Option Thursday')
+        self.assertNotContains(response, '"answers"')
+        self.assertNotContains(response, 'source-image')
+
+    def test_interactive_layout_rejects_missing_or_duplicate_questions(self):
+        content = sample_content()
+        content['sections'][0]['groups'] = [{'id': 'g', 'paragraphs': ['[[l1]] [[l1]]'], 'question_ids': ['l2', 'l3', 'l4']}]
+        with self.assertRaises(ValidationError):
+            validate_content(content)
+        content['sections'][0]['groups'][0]['paragraphs'] = ['[[missing]]']
+        with self.assertRaises(ValidationError):
+            validate_content(content)
+
+    def test_default_listening_is_forty_minutes(self):
+        from .exams import empty_content
+        self.assertEqual(empty_content()['sections'][0]['duration'], 2400)

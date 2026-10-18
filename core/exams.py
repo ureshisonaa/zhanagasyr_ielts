@@ -13,7 +13,7 @@ DEFAULT_BANDS = [[0, 0], [1, 1], [4, 2], [6, 3], [10, 4], [13, 4.5], [16, 5], [2
 
 
 def empty_content():
-    return {'sections': [{'kind': kind, 'duration': duration, 'instructions': '', 'passage': '', 'audio_id': '', 'replay': False, 'questions': [], 'bands': DEFAULT_BANDS if kind in KINDS[:2] else []} for kind, duration in zip(KINDS, [1800, 3600, 3600, 840])]}
+    return {'sections': [{'kind': kind, 'duration': duration, 'instructions': '', 'passage': '', 'audio_id': '', 'replay': False, 'questions': [], 'bands': DEFAULT_BANDS if kind in KINDS[:2] else []} for kind, duration in zip(KINDS, [2400, 3600, 3600, 840])]}
 
 
 def validate_content(content):
@@ -50,6 +50,28 @@ def validate_content(content):
                             raise ValueError('Ключи должны совпадать с вариантами ответа, варианты — быть уникальными.')
                     if type(q.get('max_words', 0)) is not int or not 0 <= q.get('max_words', 0) <= 100:
                         raise ValueError('Некорректное ограничение слов.')
+            if section.get('groups'):
+                from .presentation import TOKEN
+                expected = {q['id'] for q in questions}
+                references = []
+                group_ids = set()
+                for group in section['groups']:
+                    if not isinstance(group.get('id'), str) or group['id'] in group_ids:
+                        raise ValueError('Группы заданий должны иметь уникальные идентификаторы.')
+                    group_ids.add(group['id'])
+                    refs = group.get('question_ids', [])
+                    if not isinstance(refs, list):
+                        raise ValueError('Некорректный список вопросов группы.')
+                    references.extend(refs)
+                    text_parts = group.get('paragraphs', []) + [cell for row in group.get('rows', []) for cell in row]
+                    for text in text_parts:
+                        if not isinstance(text, str):
+                            raise ValueError('Текст заданий должен быть строкой.')
+                        references.extend(m[1] for m in TOKEN.finditer(text))
+                    if group.get('choose_count') and (group['choose_count'] != len(refs) or group['choose_count'] != 2):
+                        raise ValueError('Парный выбор должен содержать два вопроса.')
+                if len(references) != len(expected) or set(references) != expected:
+                    raise ValueError('Каждый вопрос должен встречаться в разметке ровно один раз.')
             if section['kind'] in KINDS[:2]:
                 bands = section['bands']
                 if not bands or bands[0] != [0, 0]:

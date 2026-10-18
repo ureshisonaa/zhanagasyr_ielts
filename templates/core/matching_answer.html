@@ -1,0 +1,6 @@
+<span class="matching-control" data-match-group="{{ q.group_id }}">
+<button type="button" class="answer-drop" data-drop-for="{{ q.id }}" aria-label="Ответ на вопрос {{ q.number }}: перетащите вариант или выберите ниже">Перетащите ответ сюда</button>
+<select id="answer-{{ q.id }}" name="{{ q.id }}" data-answer="{{ q.id }}" aria-label="Выбрать ответ на вопрос {{ q.number }}">
+<option value="">Выберите ответ…</option>{% for option in q.choices %}<option value="{{ option.value }}" {% if option.value == q.value %}selected{% endif %}>{{ option.value }}{% if option.label != option.value %} — {{ option.label }}{% endif %}</option>{% endfor %}
+</select><button type="button" class="clear-match" data-clear-for="{{ q.id }}" aria-label="Очистить ответ на вопрос {{ q.number }}">×</button>
+</span>

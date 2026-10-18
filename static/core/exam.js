@@ -270,13 +270,15 @@
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) poll();
   });
-  setInterval(() => {
+  function renderClock() {
     const seconds = Math.max(0, Math.ceil((deadline - serverNow()) / 1000));
     document.getElementById("countdown").textContent =
       `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
     document.querySelector(".timer").classList.toggle("urgent", seconds < 120);
     if (seconds === 0 && !closed && !closing) poll();
-  }, 1000);
+  }
+  renderClock();
+  setInterval(renderClock, 1000);
   const dialog = document.getElementById("submit-dialog");
   document.getElementById("submit-section").addEventListener("click", () => {
     if (pendingAudio.size || activeRecorders) {

@@ -18,3 +18,12 @@
 - Exam-only stylesheet and controls: part tabs, numbered navigation, review flags, focus, text size, local notes, temporary highlighting, print/PDF export, native replay controls and playback speed when replay is allowed. The existing deadline and autosave rules remain in force.
 - Desktop/mobile browser check verified part switching, answers and notes surviving reload, and no horizontal overflow or JavaScript errors.
 - Source documents are shown alongside answer fields. This is an adaptation of the supplied Engnovate reference, not a pixel-identical copy or its paid section-practice service.
+
+## Interactive text revision (2026-10-18)
+
+- Version 2 replaces page scans with escaped text, an inline Listening table and notes, complete Reading passages, and a graph-only Writing image. Original attempts retain version 1 for historical scoring.
+- Listening is 2,400 seconds (40 minutes). Updated default for newly created tests; each existing immutable version keeps its own duration.
+- Multiple choice shows full option labels. Two-answer questions use a two-selection checkbox group backed by the original two answer IDs and unordered-pair scoring.
+- Matching supports dragging a bank option, moving an existing answer, clicking a token and target, and a native select for keyboard/touch input. All routes update the same autosave fields.
+- Presentation validation requires each question reference exactly once. Template escaping remains active; answer keys are excluded from student context.
+- 44 Django tests pass. Browser checks cover timer duration, inline inputs, radios, checkbox limits, dragging/moving/clicking/selecting, reloading saved answers, passage switching, desktop/mobile width, and absence of scanned-page elements.

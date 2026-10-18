@@ -1,0 +1,1 @@
+{% for fragment in fragments %}{% if fragment.question %}{% include 'core/inline_answer.html' with q=fragment.question %}{% else %}{{ fragment.text }}{% endif %}{% endfor %}

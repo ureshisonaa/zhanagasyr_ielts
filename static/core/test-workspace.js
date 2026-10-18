@@ -61,6 +61,14 @@
     cards.forEach((c) => {
       c.hidden = c.dataset.part !== value;
     });
+    document.querySelectorAll("[data-test-part]").forEach((group) => {
+      group.hidden = group.dataset.testPart !== value;
+    });
+    document.querySelectorAll("[data-passage-part]").forEach((passage) => {
+      passage.hidden = passage.dataset.passagePart !== value;
+    });
+    if (saved.part !== value)
+      document.querySelector(".passage-pane")?.scrollTo(0, 0);
     document.querySelectorAll("[data-part-tab]").forEach((b) => {
       b.setAttribute("aria-selected", String(b.dataset.partTab === value));
       b.tabIndex = b.dataset.partTab === value ? 0 : -1;
@@ -98,7 +106,10 @@
     const flag = document.createElement("button");
     flag.type = "button";
     flag.className = "flag-question";
-    flag.textContent = "⚑ Отметить";
+    flag.textContent = card.classList.contains("inline-question")
+      ? "⚑"
+      : "⚑ Отметить";
+    flag.setAttribute("aria-label", "Отметить вопрос " + id);
     const setFlag = (value) => {
       flag.setAttribute("aria-pressed", String(value));
       card.classList.toggle("flagged", value);
@@ -119,6 +130,142 @@
         .forEach((x) => x.classList.remove("active-question"));
       link.classList.add("active-question");
     });
+  });
+  // Matching keeps a real select as the canonical value for autosave and keyboard access.
+  let selectedToken = null;
+  function emit(select) {
+    select.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  function feedback(select) {
+    const drop = document.querySelector(
+      `[data-drop-for="${select.dataset.answer}"]`,
+    );
+    if (!drop) return;
+    drop.textContent = select.value
+      ? select.selectedOptions[0].textContent
+      : "Перетащите ответ сюда";
+    drop.classList.toggle("has-answer", !!select.value);
+    drop.draggable = !!select.value;
+  }
+  function applyToken(drop, token) {
+    const control = drop.closest(".matching-control");
+    const select = control.querySelector("select");
+    if (
+      !token ||
+      token.group !== control.dataset.matchGroup ||
+      ![...select.options].some((o) => o.value === token.value)
+    )
+      return;
+    if (token.source && token.source !== select.dataset.answer) {
+      const previous = document.getElementById("answer-" + token.source);
+      if (previous) {
+        previous.value = "";
+        feedback(previous);
+        emit(previous);
+      }
+    }
+    select.value = token.value;
+    feedback(select);
+    emit(select);
+    selectedToken = null;
+    document
+      .querySelectorAll(".answer-token")
+      .forEach((t) => t.setAttribute("aria-pressed", "false"));
+  }
+  document.querySelectorAll(".answer-token").forEach((token) => {
+    const data = () => ({
+      value: token.dataset.tokenValue,
+      group: token.dataset.tokenGroup,
+    });
+    token.addEventListener("click", () => {
+      selectedToken = data();
+      document
+        .querySelectorAll(".answer-token")
+        .forEach((t) => t.setAttribute("aria-pressed", String(t === token)));
+    });
+    token.addEventListener("dragstart", (e) => {
+      selectedToken = data();
+      e.dataTransfer.setData("application/json", JSON.stringify(selectedToken));
+      e.dataTransfer.effectAllowed = "copyMove";
+    });
+  });
+  document.querySelectorAll(".matching-control select").forEach((select) => {
+    feedback(select);
+    select.addEventListener("change", () => {
+      feedback(select);
+      emit(select);
+    });
+    select.addEventListener("input", () => feedback(select));
+    const drop = select.parentElement.querySelector(".answer-drop");
+    drop.addEventListener("click", () => {
+      if (selectedToken) applyToken(drop, selectedToken);
+      else select.focus();
+    });
+    drop.addEventListener("dragover", (e) => {
+      if (
+        selectedToken?.group ===
+        drop.closest(".matching-control").dataset.matchGroup
+      ) {
+        e.preventDefault();
+        drop.classList.add("drag-over");
+      }
+    });
+    drop.addEventListener("dragleave", () =>
+      drop.classList.remove("drag-over"),
+    );
+    drop.addEventListener("drop", (e) => {
+      e.preventDefault();
+      drop.classList.remove("drag-over");
+      applyToken(drop, selectedToken);
+    });
+    drop.addEventListener("dragstart", (e) => {
+      if (!select.value) {
+        e.preventDefault();
+        return;
+      }
+      selectedToken = {
+        value: select.value,
+        group: drop.closest(".matching-control").dataset.matchGroup,
+        source: select.dataset.answer,
+      };
+      e.dataTransfer.setData("application/json", JSON.stringify(selectedToken));
+      e.dataTransfer.effectAllowed = "move";
+    });
+  });
+  document.querySelectorAll("[data-clear-for]").forEach((button) =>
+    button.addEventListener("click", () => {
+      const s = document.getElementById("answer-" + button.dataset.clearFor);
+      s.value = "";
+      feedback(s);
+      emit(s);
+    }),
+  );
+  document.querySelectorAll(".paired-choices").forEach((group) => {
+    const fields = [...group.querySelectorAll("[data-answer]")];
+    const checkboxes = [...group.querySelectorAll("[data-pair-choice]")];
+    const limit = Number(group.dataset.limit);
+    checkboxes.forEach((c) => {
+      c.checked = fields.some((f) => f.value === c.value);
+    });
+    function update(write) {
+      const chosen = checkboxes.filter((c) => c.checked).map((c) => c.value);
+      checkboxes.forEach((c) => {
+        c.disabled = !c.checked && chosen.length >= limit;
+      });
+      group.querySelector(".pair-progress").textContent =
+        `Выбрано ${chosen.length} из ${limit}`;
+      fields.forEach((field, i) => {
+        if (write) {
+          field.value = chosen[i] || "";
+          emit(field);
+        }
+        group.querySelector(
+          `[data-pair-output="${field.dataset.answer}"]`,
+        ).textContent = field.value || "—";
+      });
+    }
+    checkboxes.forEach((c) => c.addEventListener("change", () => update(true)));
+    update(false);
   });
   part(parts.includes(saved.part) ? saved.part : parts[0]);
   document.getElementById("test-focus").addEventListener("click", (e) => {

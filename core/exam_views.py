@@ -13,6 +13,7 @@ from .services import refresh_attempt, save_answers, SaveConflict, can_review, e
 from .views import roles
 from .exams import LABELS
 from .media import inspect_upload
+from .presentation import question_groups
 
 
 @roles('student')
@@ -24,12 +25,15 @@ def attempt_view(request, pk):
     run = attempt.runs.get(index=attempt.current_section)
     section = attempt.assignment.version.content['sections'][run.index]
     # Explicit allowlist: never serialize answer keys or raw-to-band tables.
-    questions = [{k: q.get(k, '') for k in ('id', 'type', 'prompt', 'options', 'image_id', 'max_words', 'material_id', 'part')} for q in section['questions']]
-    for q in questions:
+    questions = [{k: q.get(k, '') for k in ('id', 'type', 'prompt', 'options', 'image_id', 'max_words', 'material_id', 'part', 'option_labels')} for q in section['questions']]
+    for number, q in enumerate(questions, 1):
+        q['number'] = number
+        q['choices'] = [{'value': option, 'label': q.get('option_labels', {}).get(option, option) if isinstance(q.get('option_labels'), dict) else option} for option in q.get('options', [])]
         q['value'] = run.responses.get(q['id'], '')
         q['recording'] = run.recordings.filter(question_id=q['id']).first()
+    groups = question_groups(section, questions)
     state = {'attempt': str(attempt.pk), 'section': run.index, 'kind': run.kind, 'revision': run.revision, 'responses': run.responses, 'server_now': timezone.now().isoformat(), 'deadline': run.deadline.isoformat(), 'started_at': run.started_at.isoformat(), 'save_url': f'/api/attempts/{pk}/answers/', 'state_url': f'/api/attempts/{pk}/state/'}
-    return render(request, 'core/attempt.html', {'attempt': attempt, 'run': run, 'section_name': LABELS[run.kind], 'instructions': section.get('instructions', ''), 'passage': section.get('passage', ''), 'questions': questions, 'state': state, 'steps': list(LABELS.values()), 'has_audio': bool(section.get('audio_id')), 'replay': section.get('replay', False), 'materials': section.get('materials', [])})
+    return render(request, 'core/attempt.html', {'attempt': attempt, 'run': run, 'section_name': LABELS[run.kind], 'instructions': section.get('instructions', ''), 'passage': section.get('passage', ''), 'questions': questions, 'state': state, 'steps': list(LABELS.values()), 'has_audio': bool(section.get('audio_id')), 'replay': section.get('replay', False), 'materials': [], 'question_groups': groups, 'passages': section.get('passages', [])})
 
 
 @roles('student')
