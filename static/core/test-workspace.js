@@ -78,6 +78,7 @@
     if (audio && saved.part !== value) {
       audio.pause();
       audio.removeAttribute("src");
+      audio.hidden = true;
       audio.load();
       const play = document.getElementById("play-listening");
       if (play) {
@@ -85,7 +86,7 @@
         play.dataset.part = value;
         play.textContent = "▶ Listen · Part " + value;
       }
-      document.getElementById("audio-status").textContent = "";
+      document.getElementById("audio-status").textContent = "Нажмите «Слушать», чтобы загрузить аудио этой части.";
     }
     if (audio) {
       const play = document.getElementById("play-listening");

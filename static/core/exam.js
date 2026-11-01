@@ -345,31 +345,44 @@
     location.reload();
   });
   const play = document.getElementById("play-listening");
+  if (play) {
+    const audio = document.getElementById("listening-audio");
+    audio.hidden = true;
+    audio.addEventListener("playing", () => {
+      document.getElementById("audio-status").textContent = "● Воспроизведение…";
+    });
+    audio.addEventListener("error", () => {
+      play.disabled = false;
+      document.getElementById("audio-status").textContent = "Не удалось загрузить аудио. Нажмите «Слушать» ещё раз.";
+    });
+    audio.addEventListener("ended", () => {
+      document.getElementById("audio-status").textContent = "Прослушивание завершено";
+    });
+  }
   play?.addEventListener("click", async () => {
     play.disabled = true;
     const audio = document.getElementById("listening-audio");
     const audioStatus = document.getElementById("audio-status");
+    const part = play.dataset.part || "1";
+    audioStatus.textContent = "Загружаем аудио…";
     try {
-      const data = await request(
-        play.dataset.url + "?part=" + (play.dataset.part || "1"),
-        { method: "POST" },
-      );
-      audio.src = data.url;
+      if (!audio.getAttribute("src")) {
+        const data = await request(play.dataset.url + "?part=" + part, { method: "POST" });
+        if ((play.dataset.part || "1") !== part) return;
+        audio.src = data.url;
+      }
+      audio.hidden = false;
+      if (audio.error) audio.load();
       await audio.play();
       audioStatus.textContent = "● Воспроизведение…";
-      audio.addEventListener(
-        "ended",
-        () => {
-          audioStatus.textContent = "Прослушивание завершено";
-        },
-        { once: true },
-      );
-      audio.addEventListener("error", () => {
-        audioStatus.textContent =
-          "Ошибка воспроизведения. Сообщите администратору; таймер продолжает идти.";
-      });
     } catch (error) {
-      audioStatus.textContent = error.message;
+      if ((play.dataset.part || "1") === part) {
+        audioStatus.textContent = error.name === "NotAllowedError"
+          ? "Браузер не разрешил запуск. Нажмите ▶ в плеере или «Слушать» ещё раз."
+          : "Не удалось запустить аудио. Нажмите «Слушать» ещё раз. " + error.message;
+      }
+    } finally {
+      play.disabled = false;
     }
   });
   // Audio blobs survive refresh in IndexedDB until acknowledged by the server.
