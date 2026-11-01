@@ -362,6 +362,49 @@
   scroll-margin-top: 160px;
 }
 /* Interactive question layouts: one column except Reading. */
+.matching-control select[hidden] {
+  display: none !important;
+}
+.speaking-card-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 20px 0;
+  padding: 16px;
+  background: #eef5e8;
+  border-radius: 12px;
+}
+.speaking-card-nav button {
+  padding: 12px 18px;
+  border: 1px solid #b8cdb0;
+  border-radius: 8px;
+  background: white;
+  color: #214b36;
+  cursor: pointer;
+}
+.speaking-card-nav button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.kind-speaking .question-prompt {
+  display: block;
+  padding: 32px;
+  border-radius: 16px;
+  background: #f0f7e9;
+  min-height: 150px;
+  animation: question-appear 0.2s ease;
+}
+@keyframes question-appear {
+  from {
+    opacity: 0.3;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 .exam-body .exam-columns.no-passage {
   max-width: 1180px;
 }

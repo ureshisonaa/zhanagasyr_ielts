@@ -471,3 +471,13 @@ class PlatformTests(TestCase):
     def test_default_listening_is_forty_minutes(self):
         from .exams import empty_content
         self.assertEqual(empty_content()['sections'][0]['duration'], 2400)
+
+    def test_listening_selects_asset_for_requested_part(self):
+        asset = MediaAsset.objects.create(file='part3.mp3', name='Listening Part 3', content_type='audio/mpeg', owner=self.admin, version=self.version)
+        attempt = start_attempt(self.student, self.assignment.pk)
+        self.sign_in(self.student)
+        response = self.client.post(reverse('listening_start', args=[attempt.pk]) + '?part=3')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(str(asset.pk), response.json()['url'])
+        response = self.client.post(reverse('listening_start', args=[attempt.pk]) + '?part=9')
+        self.assertEqual(response.status_code, 400)

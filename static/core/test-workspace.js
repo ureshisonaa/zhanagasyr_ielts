@@ -75,6 +75,22 @@
     });
     const card = target || cards.find((c) => c.dataset.part === value);
     if (card?.dataset.material) source(card.dataset.material);
+    if (audio && saved.part !== value) {
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+      const play = document.getElementById("play-listening");
+      if (play) {
+        play.disabled = false;
+        play.dataset.part = value;
+        play.textContent = "▶ Listen · Part " + value;
+      }
+      document.getElementById("audio-status").textContent = "";
+    }
+    if (audio) {
+      const play = document.getElementById("play-listening");
+      if (play) play.dataset.part = value;
+    }
     saved.part = value;
     persist();
   }
@@ -103,26 +119,6 @@
     const link = document.querySelector(
       `.question-nav a[href="#question-${id}"]`,
     );
-    const flag = document.createElement("button");
-    flag.type = "button";
-    flag.className = "flag-question";
-    flag.textContent = card.classList.contains("inline-question")
-      ? "⚑"
-      : "⚑ Отметить";
-    flag.setAttribute("aria-label", "Отметить вопрос " + id);
-    const setFlag = (value) => {
-      flag.setAttribute("aria-pressed", String(value));
-      card.classList.toggle("flagged", value);
-      link?.classList.toggle("flagged", value);
-    };
-    setFlag(!!saved.flags?.[id]);
-    flag.addEventListener("click", () => {
-      saved.flags ||= {};
-      saved.flags[id] = !saved.flags[id];
-      setFlag(saved.flags[id]);
-      persist();
-    });
-    card.prepend(flag);
     link?.addEventListener("click", () => {
       part(card.dataset.part, card);
       document
@@ -143,7 +139,7 @@
     if (!drop) return;
     drop.textContent = select.value
       ? select.selectedOptions[0].textContent
-      : "Перетащите ответ сюда";
+      : "Drag your answer here";
     drop.classList.toggle("has-answer", !!select.value);
     drop.draggable = !!select.value;
   }
@@ -177,12 +173,6 @@
       value: token.dataset.tokenValue,
       group: token.dataset.tokenGroup,
     });
-    token.addEventListener("click", () => {
-      selectedToken = data();
-      document
-        .querySelectorAll(".answer-token")
-        .forEach((t) => t.setAttribute("aria-pressed", String(t === token)));
-    });
     token.addEventListener("dragstart", (e) => {
       selectedToken = data();
       e.dataTransfer.setData("application/json", JSON.stringify(selectedToken));
@@ -197,10 +187,6 @@
     });
     select.addEventListener("input", () => feedback(select));
     const drop = select.parentElement.querySelector(".answer-drop");
-    drop.addEventListener("click", () => {
-      if (selectedToken) applyToken(drop, selectedToken);
-      else select.focus();
-    });
     drop.addEventListener("dragover", (e) => {
       if (
         selectedToken?.group ===
@@ -230,6 +216,48 @@
       };
       e.dataTransfer.setData("application/json", JSON.stringify(selectedToken));
       e.dataTransfer.effectAllowed = "move";
+    });
+  });
+  document.querySelectorAll(".answer-token,.answer-drop").forEach((el) => {
+    let drag = null;
+    el.addEventListener("pointerdown", (e) => {
+      if (e.pointerType === "mouse") return;
+      const control = el.closest(".matching-control");
+      const input = control?.querySelector("select");
+      const value = input?.value || el.dataset.tokenValue;
+      if (!value) return;
+      drag = {
+        value,
+        group: control?.dataset.matchGroup || el.dataset.tokenGroup,
+        source: input?.dataset.answer,
+      };
+      el.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    el.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      e.preventDefault();
+      document
+        .querySelectorAll(".drag-over")
+        .forEach((x) => x.classList.remove("drag-over"));
+      document
+        .elementFromPoint(e.clientX, e.clientY)
+        ?.closest(".answer-drop")
+        ?.classList.add("drag-over");
+    });
+    el.addEventListener("pointerup", (e) => {
+      if (!drag) return;
+      const target = document
+        .elementFromPoint(e.clientX, e.clientY)
+        ?.closest(".answer-drop");
+      if (target) applyToken(target, drag);
+      document
+        .querySelectorAll(".drag-over")
+        .forEach((x) => x.classList.remove("drag-over"));
+      drag = null;
+    });
+    el.addEventListener("pointercancel", () => {
+      drag = null;
     });
   });
   document.querySelectorAll("[data-clear-for]").forEach((button) =>
@@ -292,6 +320,53 @@
     p.hidden = !p.hidden;
     if (!p.hidden) notes.focus();
   });
+  if (state.kind === "reading") {
+    const h = document.getElementById("test-highlight");
+    document.querySelector(".test-tools").append(h);
+    h.textContent = "Highlight";
+    h.addEventListener("mousedown", (e) => e.preventDefault());
+  }
+  if (state.kind === "speaking") {
+    cards.forEach((card) => {
+      const label = card.querySelector(".question-prompt");
+      const lines = label.textContent
+        .split(/\n/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const prompts =
+        card.dataset.part === "2"
+          ? [label.textContent]
+          : lines.filter((s) => s.endsWith("?"));
+      if (!prompts.length) return;
+      let i = 0;
+      label.textContent = prompts[0];
+      const nav = document.createElement("div");
+      nav.className = "speaking-card-nav";
+      const count = document.createElement("span");
+      const prev = document.createElement("button");
+      const next = document.createElement("button");
+      prev.type = next.type = "button";
+      prev.textContent = "Previous";
+      next.textContent = "Next question";
+      const paint = () => {
+        label.textContent = prompts[i];
+        count.textContent = i + 1 + " / " + prompts.length;
+        prev.disabled = i === 0;
+        next.disabled = i === prompts.length - 1;
+      };
+      prev.onclick = () => {
+        i--;
+        paint();
+      };
+      next.onclick = () => {
+        i++;
+        paint();
+      };
+      nav.append(prev, count, next);
+      label.after(nav);
+      paint();
+    });
+  }
   let selection;
   document.addEventListener("selectionchange", () => {
     const s = window.getSelection();

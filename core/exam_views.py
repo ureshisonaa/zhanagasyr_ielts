@@ -74,12 +74,17 @@ def listening_start(request, pk):
             return JsonResponse({'error': 'Секция Listening завершена.'}, status=409)
         run = attempt.runs.get(index=0)
         section = attempt.assignment.version.content['sections'][0]
+        part = request.GET.get('part', '1')
+        if part not in ('1', '2', '3', '4'):
+            return JsonResponse({'error': 'Invalid listening part'}, status=400)
+        asset = attempt.assignment.version.assets.filter(name=f'Listening Part {part}', content_type__startswith='audio/').first()
+        audio_id = str(asset.pk) if asset else section['audio_id']
         if run.audio_started_at and not section.get('replay'):
             return JsonResponse({'error': 'Запись уже запускалась. При технической ошибке обратитесь к администратору.'}, status=409)
         run.audio_started_at = timezone.now()
         run.save(update_fields=['audio_started_at'])
-        token = signing.dumps({'attempt': str(pk), 'user': request.user.pk, 'asset': section['audio_id'], 'session': request.user.session_version}, salt='listening')
-    return JsonResponse({'url': f'/media/{section["audio_id"]}/?play={token}'})
+        token = signing.dumps({'attempt': str(pk), 'user': request.user.pk, 'asset': audio_id, 'session': request.user.session_version}, salt='listening')
+    return JsonResponse({'url': f'/media/{audio_id}/?play={token}'})
 
 
 @roles('student')
@@ -177,7 +182,7 @@ def private_media(request, pk):
                     allowed_ids = [q.get('image_id') for q in section['questions']] + [m['id'] for m in section.get('materials', [])]
                     if str(asset.pk) in allowed_ids and asset.content_type.startswith('image/'):
                         allowed = True
-                    elif str(asset.pk) == section.get('audio_id'):
+                    elif str(asset.pk) == section.get('audio_id') or (attempt.current_section == 0 and asset.name in [f'Listening Part {n}' for n in range(1, 5)] and asset.content_type.startswith('audio/')):
                         try:
                             token = signing.loads(request.GET.get('play', ''), salt='listening', max_age=section['duration'] + 120)
                             allowed = token == {'attempt': str(attempt.pk), 'user': user.pk, 'asset': str(asset.pk), 'session': user.session_version}

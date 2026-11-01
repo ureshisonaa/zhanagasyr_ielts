@@ -350,7 +350,10 @@
     const audio = document.getElementById("listening-audio");
     const audioStatus = document.getElementById("audio-status");
     try {
-      const data = await request(play.dataset.url, { method: "POST" });
+      const data = await request(
+        play.dataset.url + "?part=" + (play.dataset.part || "1"),
+        { method: "POST" },
+      );
       audio.src = data.url;
       await audio.play();
       audioStatus.textContent = "● Воспроизведение…";
