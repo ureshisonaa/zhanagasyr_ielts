@@ -109,7 +109,6 @@ class AssignmentForm(forms.Form):
     teacher = forms.ModelChoiceField(label='Преподаватель для проверки', queryset=User.objects.none())
     opens_at = forms.DateTimeField(label='Доступен с (время Кызылорды)', widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'))
     due_at = forms.DateTimeField(label='Завершить до (время Кызылорды)', widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'))
-    attempts_allowed = forms.IntegerField(label='Количество попыток', min_value=1, max_value=20, initial=1)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

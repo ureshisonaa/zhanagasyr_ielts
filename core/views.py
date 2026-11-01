@@ -275,7 +275,7 @@ def upload_asset(request, pk):
 @roles('super', 'admin')
 def assignments(request):
     qs = Assignment.objects.select_related('student', 'teacher', 'version__exam').order_by('-pk')
-    rows = [{'cells': [a.student.display_name, str(a.version), a.teacher.display_name, timezone.localtime(a.due_at).strftime('%d.%m.%Y %H:%M'), a.attempts_allowed]} for a in qs[:200]]
+    rows = [{'cells': [a.student.display_name, str(a.version), a.teacher.display_name, timezone.localtime(a.due_at).strftime('%d.%m.%Y %H:%M'), 'Без ограничений']} for a in qs[:200]]
     return listing(request, 'Назначения', ['Ученик', 'Экзамен', 'Проверяющий', 'Срок', 'Попыток'], rows, create_url=reverse('assignment_create'), create_label='Назначить экзамен', description='Каждое назначение закрепляет конкретную версию и преподавателя. Последние 200 назначений.')
 
 
@@ -291,7 +291,7 @@ def assignment_create(request):
             created = 0
             with transaction.atomic():
                 for student in students:
-                    assignment, fresh = Assignment.objects.get_or_create(version=data['version'], student=student, defaults={'teacher': data['teacher'], 'group': data['group'], 'opens_at': data['opens_at'], 'due_at': data['due_at'], 'attempts_allowed': data['attempts_allowed'], 'assigned_by': request.user})
+                    assignment, fresh = Assignment.objects.get_or_create(version=data['version'], student=student, defaults={'teacher': data['teacher'], 'group': data['group'], 'opens_at': data['opens_at'], 'due_at': data['due_at'], 'assigned_by': request.user})
                     created += int(fresh)
                     if fresh:
                         services.audit(request.user, 'exam.assigned', assignment.pk, student=student.pk)

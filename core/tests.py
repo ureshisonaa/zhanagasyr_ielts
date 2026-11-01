@@ -134,14 +134,13 @@ class PlatformTests(TestCase):
         client = self.sign_in(self.admin, Client(enforce_csrf_checks=True))
         self.assertEqual(client.post(reverse('user_action', args=[self.student.pk]), {'action': 'toggle'}).status_code, 403)
 
-    def test_attempt_start_idempotent_and_limit(self):
+    def test_attempt_start_idempotent_and_repeatable(self):
         attempt = start_attempt(self.student, self.assignment.pk)
         self.assertEqual(start_attempt(self.student, self.assignment.pk).pk, attempt.pk)
         self.assertEqual(Attempt.objects.count(), 1)
         self.completed_attempt()
         self.completed_attempt()
-        with self.assertRaises(ValidationError):
-            start_attempt(self.student, self.assignment.pk)
+        self.assertEqual(start_attempt(self.student, self.assignment.pk).number, 3)
 
     def test_assignment_availability_enforced(self):
         self.assignment.opens_at = timezone.now() + timedelta(hours=1)
@@ -471,6 +470,13 @@ class PlatformTests(TestCase):
     def test_default_listening_is_forty_minutes(self):
         from .exams import empty_content
         self.assertEqual(empty_content()['sections'][0]['duration'], 2400)
+
+    def test_exam_attempts_are_unlimited(self):
+        for _ in range(3):
+            self.completed_attempt()
+        attempt = start_attempt(self.student, self.assignment.pk)
+        self.assertEqual(attempt.number, 4)
+        self.assertEqual(start_attempt(self.student, self.assignment.pk).pk, attempt.pk)
 
     def test_listening_selects_asset_for_requested_part(self):
         asset = MediaAsset.objects.create(file='part3.mp3', name='Listening Part 3', content_type='audio/mpeg', owner=self.admin, version=self.version)

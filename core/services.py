@@ -58,8 +58,6 @@ def start_attempt(user, assignment_id):
     if not assignment.version.published_at or not assignment.opens_at <= now < assignment.due_at:
         raise ValidationError('Экзамен сейчас недоступен.')
     count = assignment.attempts.count()
-    if count >= assignment.attempts_allowed:
-        raise ValidationError('Лимит попыток исчерпан.')
     attempt = Attempt.objects.create(assignment=assignment, number=count + 1)
     make_run(attempt, 0, now)
     audit(user, 'attempt.started', attempt.pk)
