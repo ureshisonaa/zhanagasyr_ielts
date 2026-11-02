@@ -471,6 +471,19 @@ class PlatformTests(TestCase):
         from .exams import empty_content
         self.assertEqual(empty_content()['sections'][0]['duration'], 2400)
 
+    def test_retired_version_redirects_to_current_and_preserves_history(self):
+        self.completed_attempt()
+        TestVersion.objects.filter(pk=self.version.pk).update(retired=True)
+        current = TestVersion.objects.create(exam=self.exam, number=2, content=sample_content(), published_at=timezone.now())
+        replacement = Assignment.objects.create(version=current, student=self.student, teacher=self.teacher, assigned_by=self.admin, due_at=self.assignment.due_at)
+        self.sign_in(self.student)
+        response = self.client.get(reverse('student_exams'))
+        self.assertEqual([a.pk for a in response.context['assignments']], [replacement.pk])
+        self.assertRedirects(self.client.get(reverse('instructions', args=[self.assignment.pk])), reverse('instructions', args=[replacement.pk]))
+        with self.assertRaises(ValidationError):
+            start_attempt(self.student, self.assignment.pk)
+        self.assertEqual(self.assignment.attempts.count(), 1)
+
     def test_exam_attempts_are_unlimited(self):
         for _ in range(3):
             self.completed_attempt()

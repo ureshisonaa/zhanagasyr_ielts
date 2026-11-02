@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
-from django.db.models import Avg, Q
+from django.db.models import Avg, Q, Prefetch
 from django.http import HttpResponse, JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -149,7 +149,7 @@ def group_edit(request, pk=None):
 
 @roles('super', 'admin')
 def exam_bank(request):
-    exams = Exam.objects.prefetch_related('versions').order_by('-created_at')
+    exams = Exam.objects.prefetch_related(Prefetch('versions', queryset=TestVersion.objects.filter(retired=False))).order_by('-created_at')
     return render(request, 'core/bank.html', {'exams': exams})
 
 
@@ -274,7 +274,7 @@ def upload_asset(request, pk):
 
 @roles('super', 'admin')
 def assignments(request):
-    qs = Assignment.objects.select_related('student', 'teacher', 'version__exam').order_by('-pk')
+    qs = Assignment.objects.filter(version__retired=False).select_related('student', 'teacher', 'version__exam').order_by('-pk')
     rows = [{'cells': [a.student.display_name, str(a.version), a.teacher.display_name, timezone.localtime(a.due_at).strftime('%d.%m.%Y %H:%M'), 'Без ограничений']} for a in qs[:200]]
     return listing(request, 'Назначения', ['Ученик', 'Экзамен', 'Проверяющий', 'Срок', 'Попыток'], rows, create_url=reverse('assignment_create'), create_label='Назначить экзамен', description='Каждое назначение закрепляет конкретную версию и преподавателя. Последние 200 назначений.')
 
@@ -302,13 +302,18 @@ def assignment_create(request):
 
 @roles('student')
 def student_exams(request):
-    assignments = request.user.assignments.select_related('version__exam', 'teacher').prefetch_related('attempts').order_by('due_at')
+    assignments = request.user.assignments.filter(version__retired=False).select_related('version__exam', 'teacher').prefetch_related('attempts').order_by('due_at')
     return render(request, 'core/exams.html', {'assignments': assignments, 'now': timezone.now()})
 
 
 @roles('student')
 def instructions(request, pk):
     assignment = get_object_or_404(Assignment.objects.select_related('version__exam', 'teacher'), pk=pk, student=request.user)
+    if assignment.version.retired:
+        replacement = request.user.assignments.filter(version__exam=assignment.version.exam, version__retired=False, version__published_at__isnull=False).order_by('-version__number').first()
+        if replacement:
+            return redirect('instructions', pk=replacement.pk)
+        return redirect('student_exams')
     if request.method == 'POST':
         if request.POST.get('ready') != 'yes':
             messages.error(request, 'Подтвердите готовность и ознакомление с записью аудио.')

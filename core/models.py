@@ -58,6 +58,7 @@ class Exam(models.Model):
 
 
 class TestVersion(models.Model):
+    retired = models.BooleanField(default=False)
     exam = models.ForeignKey(Exam, on_delete=models.PROTECT, related_name='versions')
     number = models.PositiveIntegerField(default=1)
     content = models.JSONField(default=dict)

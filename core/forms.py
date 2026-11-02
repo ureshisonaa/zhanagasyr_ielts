@@ -112,7 +112,7 @@ class AssignmentForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['version'].queryset = TestVersion.objects.filter(published_at__isnull=False, exam__archived=False).select_related('exam')
+        self.fields['version'].queryset = TestVersion.objects.filter(published_at__isnull=False, exam__archived=False, retired=False).select_related('exam')
         self.fields['student'].queryset = User.objects.filter(role='student', is_active=True)
         self.fields['teacher'].queryset = User.objects.filter(role='teacher', is_active=True)
 

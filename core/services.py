@@ -55,7 +55,7 @@ def start_attempt(user, assignment_id):
         expire_locked(existing)
         return existing
     now = timezone.now()
-    if not assignment.version.published_at or not assignment.opens_at <= now < assignment.due_at:
+    if assignment.version.retired or not assignment.version.published_at or not assignment.opens_at <= now < assignment.due_at:
         raise ValidationError('Экзамен сейчас недоступен.')
     count = assignment.attempts.count()
     attempt = Attempt.objects.create(assignment=assignment, number=count + 1)
