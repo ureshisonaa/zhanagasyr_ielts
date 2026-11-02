@@ -1,5 +1,5 @@
 (() => {
-  const cards = [...document.querySelectorAll(".question-card")];
+  const cards = [...document.querySelectorAll(".question-card, .pair-anchor")];
   if (!cards.length) return;
   const state = JSON.parse(document.getElementById("exam-state").textContent);
   const storageKey = `workspace:${state.attempt}:${state.section}`;
@@ -288,9 +288,6 @@
           field.value = chosen[i] || "";
           emit(field);
         }
-        group.querySelector(
-          `[data-pair-output="${field.dataset.answer}"]`,
-        ).textContent = field.value || "—";
       });
     }
     checkboxes.forEach((c) => c.addEventListener("change", () => update(true)));
